@@ -301,7 +301,8 @@
   .simon-btn:active { filter: brightness(0.8); transform: translateY(0); }
   .sbtn-red   { background: #8b1c1c; color: #ffdada; }
   .sbtn-blue  { background: #1c3a8b; color: #daecff; }
-  .sbtn-green { background: #1c6b2a; color: #d0ffd8; }
+  .sbtn-green  { background: #1c6b2a; color: #d0ffd8; }
+  .sbtn-yellow { background: #8b7a0a; color: #fffacc; }
 
   /* ── Text inputs ───────────────────────────── */
   .puzzle-input-row { display: flex; align-items: center; gap: 0.65rem; margin-top: 0.75rem; }
@@ -396,6 +397,36 @@
   #status-bar .stat-val { color: var(--text); margin-left: 0.35rem; }
   #status-bar .stat-val.danger { color: var(--red); }
 
+  /* ── Location image ──────────────────────────── */
+  #location-img-wrap {
+    width: 100%;
+    max-width: 740px;
+    margin: 0.75rem 0 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    line-height: 0;
+    position: relative;
+  }
+  #location-img-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.82) 100%),
+      linear-gradient(to bottom, rgba(14,11,9,0.5) 0%, transparent 25%, transparent 75%, rgba(14,11,9,0.75) 100%);
+    pointer-events: none;
+  }
+  #location-img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    object-position: center 40%;
+    display: block;
+    filter: brightness(0.55) contrast(1.15) saturate(0.3) sepia(0.45);
+    transition: opacity 0.5s ease;
+  }
+
   /* ── Scrollbar ─────────────────────────────── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -412,9 +443,21 @@
   </div>
 </div>
 
+<div id="location-img-wrap">
+  <img id="location-img" src="https://www.lib.uchicago.edu/media/images/1stfloorrr.width-800.jpg" alt="Regenstein Library" />
+</div>
+
 <div id="passage-wrap">
   <div id="passage-title"></div>
   <div id="passage-content"></div>
+</div>
+
+<button id="hint-btn" onclick="revealHint()">💡 Reveal Hint</button>
+
+<div id="status-bar">
+  <span><span class="stat-label">Time:</span><span class="stat-val" id="stat-time">00:00</span></span>
+  <span><span class="stat-label">Mistakes:</span><span class="stat-val" id="stat-mistakes">0</span></span>
+  <span><span class="stat-label">Hints Used:</span><span class="stat-val" id="stat-hints">0</span></span>
 </div>
 
 <script>
@@ -426,6 +469,10 @@ const G = {
   chestDone: false,
   caesarDone: false,
   hasID: false,
+  mistakes: 0,
+  hints: 0,
+  startTime: null,
+  timerInterval: null,
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -437,9 +484,77 @@ function give(item) {
   el.textContent = [...G.inv].join('  ·  ');
 }
 
+function formatTime() {
+  if (!G.startTime) return '00:00';
+  const elapsed = Math.floor((Date.now() - G.startTime) / 1000);
+  const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const s = (elapsed % 60).toString().padStart(2, '0');
+  return m + ':' + s;
+}
+
+function updateStats() {
+  const t = document.getElementById('stat-time');
+  const m = document.getElementById('stat-mistakes');
+  const h = document.getElementById('stat-hints');
+  if (t) t.textContent = formatTime();
+  if (m) m.textContent = G.mistakes;
+  if (h) h.textContent = G.hints;
+}
+
+function revealHint() {
+  const hints = document.querySelectorAll('#passage-content .hint');
+  let anyHidden = false;
+  hints.forEach(h => { if (!h.classList.contains('revealed')) anyHidden = true; });
+  if (!anyHidden) return;
+  G.hints++;
+  hints.forEach(h => h.classList.add('revealed'));
+  updateStats();
+  const btn = document.getElementById('hint-btn');
+  if (btn) btn.style.display = 'none';
+}
+
+const PASSAGE_IMAGES = {
+  Start:      'https://www.lib.uchicago.edu/media/images/1stfloorrr.width-800.jpg',
+  Entrance:   'https://www.lib.uchicago.edu/media/images/1stfloorrr.width-800.jpg',
+  Hallway:    'https://www.lib.uchicago.edu/media/images/scrc_anqHklG.width-800.jpg',
+  Elevator:   'https://t3.ftcdn.net/jpg/01/27/03/34/360_F_127033477_KRcyeZnO6s3TnHO1lFaMiUiyFvHzdaXo.jpg',
+  BLevel:     'https://s3-media0.fl.yelpcdn.com/bphoto/3yiA-SZOyVpY0CGq1kWu7g/348s.jpg',
+  ALevel:     'https://www.lib.uchicago.edu/media/images/IMG_5046.width-500.jpg',
+  Floor2:     'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Floor3:     'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Floor4:     'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Floor4West: 'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Floor4East: 'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Floor5:     'https://www.lib.uchicago.edu/media/images/2ndFloor.width-500.jpg',
+  Mansueto:   'https://www.wernersobek.com/wp-content/uploads/resized/2021/05/steel-1920x0-c-default.jpg',
+  Escape:     'https://www.illuminationsmedia.co.uk/wp-content/uploads/2024/05/Regenstein-Library-1024x644.jpg',
+};
+
 function go(passage) {
   const p = PASSAGES[passage];
   if (!p) return;
+  // Swap location image (only animate if the image actually changes)
+  const img = document.getElementById('location-img');
+  if (img && PASSAGE_IMAGES[passage]) {
+    const newSrc = PASSAGE_IMAGES[passage];
+    if (img.src !== newSrc) {
+      img.style.opacity = '0';
+      setTimeout(() => { img.src = newSrc; img.style.opacity = '1'; }, 200);
+    }
+  }
+  // Start timer on first real navigation
+  if (!G.startTime && passage !== 'Start') {
+    G.startTime = Date.now();
+    G.timerInterval = setInterval(() => {
+      const el = document.getElementById('stat-time');
+      if (el) el.textContent = formatTime();
+    }, 1000);
+  }
+  // Stop timer when player reaches the win screen
+  if (passage === 'Escape' && G.timerInterval) {
+    clearInterval(G.timerInterval);
+    G.timerInterval = null;
+  }
   document.getElementById('passage-title').textContent = p.title;
   // Trigger animation by replacing element
   const old = document.getElementById('passage-content');
@@ -448,6 +563,10 @@ function go(passage) {
   fresh.innerHTML = p.render();
   old.replaceWith(fresh);
   p.boot && p.boot();
+  // Show/hide hint button
+  const hintEls = fresh.querySelectorAll('.hint');
+  const hintBtn = document.getElementById('hint-btn');
+  if (hintBtn) hintBtn.style.display = hintEls.length > 0 ? 'block' : 'none';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -480,14 +599,14 @@ const PASSAGES = {
   Entrance: {
     title: 'Entrance Hall',
     render: () => `
-      <p>The entrance hall. Phil crouches by the door like a very large, flaming bouncer. Two routes branch away from you.</p>
-      ${G.hasID ? `<div class="item-found">✦ You're holding <strong>Phil's ID</strong>. The exit is right there.</div>` : ''}
+      <p>The entrance hall. Phil crouches by the door like a very large, angry bouncer. Two routes branch away from you.</p>
+      ${G.hasID ? `<div class="item-found">✦ You're holding <strong>PHIL'S ID</strong>. The exit is right there.</div>` : ''}
       <div class="choices">
         ${btn('→ Take the elevator', 'Elevator')}
         ${has('MAROON KEY')
           ? btn('→ Walk down the hallway', 'Hallway')
           : btn('→ Hallway — door sealed (need MAROON KEY)', 'Hallway', false)}
-        ${G.hasID ? `<button class="choice" onclick="go('Escape')">→ Return Phil's ID and escape!</button>` : ''}
+        ${G.hasID ? `<button class="choice" onclick="go('Escape')">→ Return PHIL'S ID and escape!</button>` : ''}
       </div>
     `
   },
@@ -496,7 +615,7 @@ const PASSAGES = {
   Elevator: {
     title: 'Elevator',
     render: () => `
-      <p>The elevator cab is cramped and smells faintly of old paper. Buttons glow in the dark.</p>
+      <p>The elevator cab is cramped and smells faintly of old paper. Buttons glow in the dark. You've been here before, haven't you?</p>
       <div class="choices">
         ${btn('↓ B Level', 'BLevel')}
         ${btn('↓ A Level', 'ALevel')}
@@ -527,7 +646,7 @@ const PASSAGES = {
 
   /* ── B Level — Maze ── */
   BLevel: {
-    title: 'B Level — Bookstack Maze',
+    title: 'B Level — Bookstacks',
     render: () => {
       const seq = ['N','E','S','S'];
       const done = G.mazeStep >= 4;
@@ -535,7 +654,7 @@ const PASSAGES = {
       if (done && has('MIND KEY')) {
         return `
           <p>The maze stretches around you, but you already know its secret. The <strong>MIND KEY</strong> glints in your inventory.</p>
-          <p>On the table, the crumpled note still reads: <em>N E S S — IS THE TRUTH.</em></p>
+          <p>On the table, the crumpled note still reads: <em>I TOLD YOU TO FOLLOW NESS. HE WORKS HERE, HE KNOWS WHERE TO GO.</em></p>
           <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
         `;
       }
@@ -549,9 +668,10 @@ const PASSAGES = {
       }
       return `
         <p>Bookstacks loom in every direction, forming a dim maze. A single table holds a crumpled scrap of paper:</p>
-        <div class="prop-clue">N &nbsp; E &nbsp; S &nbsp; S<br><span style="font-size:0.65em; letter-spacing:0.2em; color:#888;">IS THE TRUTH</span></div>
+        <div class="prop-clue">I TOLD YOU TO FOLLOW NESS. HE WORKS HERE, HE KNOWS WHERE TO GO.</span></div>
+        <p class="hint">NESS is a real person who works in this very building — interestingly each letter in it though points to a direction.</p>
         <div class="puzzle-area">
-          <div class="puzzle-label">Navigate the Maze</div>
+          <div class="puzzle-label">Navigate the Bookstacks</div>
           <div class="progress-track" id="maze-prog">Path so far: ${progress}</div>
           <div class="dir-grid">
             <div></div>
@@ -579,15 +699,15 @@ const PASSAGES = {
       <div class="venn">
         <div>
           <div class="venn-circle vc-brain">🧠</div>
-          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">left</div>
+          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">right (found #5)</div>
         </div>
         <div style="color:var(--text-dim); font-size:1.5rem;">∩</div>
         <div>
           <div class="venn-circle vc-bird">🐦‍🔥</div>
-          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">right</div>
+          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">left (found #4)</div>
         </div>
       </div>
-      <p class="hint">A brain and a fiery bird… the two things you might need to unlock further floors.</p>
+      <p class="hint">A brain and a fiery bird… could the order of these symbols be significant?</p>
       <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
     `
   },
@@ -610,14 +730,14 @@ const PASSAGES = {
     `
   },
 
-  /* ── Floor 3 — Simon Says ── */
+  /* ── Floor 3 — Dean Boyer Says ── */
   Floor3: {
-    title: 'Floor 3 — Simon Says',
+    title: 'Floor 3 — Dean Boyer Says',
     render: () => {
       const done = G.simonStep >= 4;
       if (done && has('PHOENIX KEY')) {
         return `
-          <p>The Simon Says machine sits silent, its latch hanging open. The <strong>PHOENIX KEY</strong> is already in your possession.</p>
+          <p>The Dean Boyer Says machine sits silent, its latch hanging open. The <strong>PHOENIX KEY</strong> is already in your possession.</p>
           <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
         `;
       }
@@ -630,14 +750,15 @@ const PASSAGES = {
         `;
       }
       return `
-        <p>In the centre of the room stands a <strong>Simon Says machine</strong>. The UChicago Phoenix stares from its face. You shake it gently — something metallic shifts inside. There's a latch.</p>
+        <p>In the centre of the room stands a <strong>Dean Boyer Says machine</strong>. The UChicago Phoenix stares from its face. You shake it gently — something metallic shifts inside. There's a latch.</p>
         <div class="puzzle-area">
-          <div class="puzzle-label">Simon Says — Enter the Correct Sequence</div>
+          <div class="puzzle-label">Dean Boyer Says — Enter the Correct Sequence</div>
           <div class="progress-track" id="simon-prog">Sequence: ${G.simonStep}/4 correct</div>
           <div class="simon-grid">
-            <button class="simon-btn sbtn-red"   onclick="simonPress('RED')">● Red</button>
-            <button class="simon-btn sbtn-blue"  onclick="simonPress('BLUE')">● Blue</button>
-            <button class="simon-btn sbtn-green" onclick="simonPress('GREEN')">● Green</button>
+            <button class="simon-btn sbtn-red"    onclick="simonPress('RED')">● Red</button>
+            <button class="simon-btn sbtn-blue"   onclick="simonPress('BLUE')">● Blue</button>
+            <button class="simon-btn sbtn-green"  onclick="simonPress('GREEN')">● Green</button>
+            <button class="simon-btn sbtn-yellow" onclick="simonPress('YELLOW')">● Yellow</button>
           </div>
           <div id="simon-msg"></div>
         </div>
@@ -665,7 +786,6 @@ const PASSAGES = {
     render: () => `
       <p>You approach the west wall. Scratched in deep, ragged strokes:</p>
       <div class="prop-clue" style="font-size:2.2rem; font-family:'Cinzel',serif; letter-spacing:0.2em;">EIGHT</div>
-      <p class="hint">Just the word. Nothing else.</p>
       <div class="choices">${btn('← Back to Floor 4', 'Floor4')}</div>
     `
   },
@@ -700,6 +820,7 @@ const PASSAGES = {
           </div>
         </div>
         <p>The chest bears a <strong>4-digit combination lock</strong>.</p>
+        <p class="hint">The score on the Post-it is only two digits to the code</p>
         <div class="puzzle-area">
           <div class="puzzle-label">Enter the Four-Digit Code</div>
           <div class="puzzle-input-row">
@@ -717,17 +838,17 @@ const PASSAGES = {
   Mansueto: {
     title: 'Mansueto Library',
     render: () => {
-      if (G.caesarDone && has("Phil's ID")) {
+      if (G.caesarDone && has("PHIL'S ID")) {
         return `
-          <p>The dome is silent. The terminal glows green in the dark. Phil's ID is safely in your grasp.</p>
+          <p>The dome is silent. The terminal glows green in the dark. PHIL'S ID is safely in your grasp.</p>
           <div class="choices">${btn('← Back to Entrance', 'Entrance')}</div>
         `;
       }
       if (G.caesarDone) {
         return `
-          <p>The screen flashes. A table illuminates behind you. Resting there, slightly dusty, is <strong>Phil's ID</strong>.</p>
+          <p>The screen flashes. A table illuminates behind you. Resting there, slightly dusty, is <strong>PHIL'S ID</strong>.</p>
           <div class="choices">
-            <button class="choice" onclick="give(&quot;Phil's ID&quot;); G.hasID=true; go('Entrance')">✦ Take Phil's ID</button>
+            <button class="choice" onclick="give(&quot;PHIL'S ID&quot;); G.hasID=true; go('Entrance')">✦ Take PHIL'S ID</button>
           </div>
         `;
       }
@@ -735,10 +856,11 @@ const PASSAGES = {
         <p>The Mansueto dome rises into blackness above you. Cold and gloomy. A single desk lamp casts pale light onto a computer screen.</p>
         <div class="prop-terminal">
           <div class="term-label">TERMINAL &gt;&gt;</div>
-          CAESAR TOOK 3 STEPS FORWARD<br><br>
+          CAESAR TOOK 3 STEPS BACKWARD<br><br>
           <span style="font-size:1.6rem; letter-spacing:0.5em;">R &nbsp; L &nbsp; Z</span>
         </div>
         <p>Below the screen is an input field — three characters wide.</p>
+        <p class="hint">Caesar "took 3 steps backward" means each letter was shifted 3 places back in the alphabet to encode it</p>
         <div class="puzzle-area">
           <div class="puzzle-label">Enter the Decoded Letters</div>
           <div class="puzzle-input-row">
@@ -760,10 +882,10 @@ const PASSAGES = {
       <div id="win-wrap">
         <div style="font-size:3rem;">🐦‍🔥</div>
         <h2>You Escaped the Reg</h2>
-        <p>You hold up Phil's ID. Phil the Phoenix stares at it for a long moment. His blazing feathers cool — first orange, then amber, then a dim, embarrassed crimson.</p>
+        <p>You hold up PHIL'S ID. Phil the Phoenix stares at it for a long moment. His blazing feathers cool — first orange, then amber, then a dim, embarrassed crimson.</p>
         <p><em>"…Fine,"</em> he mutters, stepping aside. <em>"You may pass."</em></p>
         <p>The heavy door swings open. Cool night air floods in. You step out onto the quad, gothic spires silhouetted against a dark sky, and breathe.</p>
-        <p style="color: var(--gold); font-family:'Cinzel',serif; letter-spacing:0.1em; margin-top:1.5rem;">The University of Chicago, 1890–present.<br>Phil will not be losing his ID again.</p>
+        <p style="color: var(--gold); font-family:'Cinzel',serif; letter-spacing:0.1em; margin-top:1.5rem;">The University of Chicago, 1890–present.<br>Where Fun Comes To Die</p>
         <div class="choices" style="align-items:center; margin-top:2rem;">
           <button class="choice" onclick="resetGame()" style="width:fit-content;">↩ Play Again</button>
         </div>
@@ -789,6 +911,7 @@ function mazeMove(dir) {
     }
   } else {
     G.mazeStep = 0;
+    G.mistakes++; updateStats();
     if (prog) prog.textContent = 'Path so far: (start)';
     if (msg) { msg.className = 'msg-err'; msg.textContent = '✗ A dead end. The stacks close in and you find yourself back at the beginning.'; }
   }
@@ -809,7 +932,8 @@ function simonPress(color) {
     }
   } else {
     G.simonStep = 0;
-    if (prog) prog.textContent = 'Sequence: 0/4 correct';
+    G.mistakes++; updateStats();
+      if (prog) prog.textContent = 'Sequence: 0/4 correct';
     if (msg) { msg.className = 'msg-err'; msg.textContent = '✗ BZZT! The machine buzzes angrily and resets.'; }
   }
 }
@@ -822,6 +946,7 @@ function checkChest() {
     G.chestDone = true;
     go('Floor5');
   } else {
+    G.mistakes++; updateStats();
     msg.className = 'msg-err';
     msg.textContent = '✗ The lock does not budge.';
   }
@@ -834,6 +959,7 @@ function checkCaesar() {
     G.caesarDone = true;
     go('Mansueto');
   } else {
+    G.mistakes++; updateStats();
     msg.className = 'msg-err';
     msg.textContent = '✗ Nothing happens. The cursor blinks indifferently.';
   }
@@ -846,7 +972,12 @@ function resetGame() {
   G.chestDone = false;
   G.caesarDone = false;
   G.hasID = false;
+  G.mistakes = 0;
+  G.hints = 0;
+  G.startTime = null;
+  if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
   document.getElementById('inventory-items').textContent = 'empty';
+  updateStats();
   go('Start');
 }
 

@@ -41,7 +41,23 @@
     background-image:
       radial-gradient(ellipse at 20% 20%, rgba(139,28,28,0.04) 0%, transparent 60%),
       radial-gradient(ellipse at 80% 80%, rgba(139,28,28,0.03) 0%, transparent 60%);
+    position: relative;
   }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url('png/cartographer.png');
+    background-repeat: repeat;
+    background-size: 800px;
+    opacity: 0.45;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body > * { position: relative; z-index: 1; }
 
   /* ── Header ────────────────────────────────── */
   #header {

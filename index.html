@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape The Reg</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Share+Tech+Mono&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #8b1c1c;
+    --maroon-bright: #b52626;
+    --maroon-dim: #5a1212;
+    --gold: #c9a84c;
+    --gold-dim: #7d6530;
+    --bg: #0e0b09;
+    --panel: #14100d;
+    --panel2: #1c1510;
+    --border: #2e2218;
+    --text: #d4c9b8;
+    --text-dim: #7a6e60;
+    --green: #3a7d44;
+    --green-bright: #5fbf6e;
+    --red: #b52626;
+    --blue: #2d6a9f;
+    --simon-green: #2a7d3a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IM Fell English', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 1.5rem 1rem 3rem;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(139,28,28,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,28,28,0.03) 0%, transparent 60%);
+  }
+
+  /* ── Header ────────────────────────────────── */
+  #header {
+    width: 100%;
+    max-width: 740px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  #game-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    color: var(--maroon);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  #inventory-bar {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  #inventory-label { color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  #inventory-items { color: var(--gold); }
+
+  /* ── Main passage panel ─────────────────────── */
+  #passage-wrap {
+    width: 100%;
+    max-width: 740px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--panel);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #passage-wrap::before {
+    content: '';
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--maroon), var(--gold), var(--maroon), transparent);
+  }
+
+  #passage-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    padding: 1.5rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.05em;
+  }
+
+  #passage-content {
+    padding: 1.75rem 2rem 2rem;
+    line-height: 1.9;
+    font-size: 1.02rem;
+    animation: fadeIn 0.35s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  #passage-content p { margin-bottom: 1rem; }
+  #passage-content em { color: #b0a48e; }
+  #passage-content strong { color: var(--text); font-style: normal; }
+
+  /* ── Choices ───────────────────────────────── */
+  .choices {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .choice {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IM Fell English', Georgia, serif;
+    font-size: 0.97rem;
+    padding: 0.65rem 1.1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.18s;
+    border-radius: 1px;
+    position: relative;
+  }
+  .choice::before {
+    content: '›';
+    color: var(--maroon);
+    margin-right: 0.5rem;
+    transition: margin 0.18s;
+  }
+  .choice:hover {
+    background: var(--panel2);
+    border-color: var(--maroon-dim);
+    color: #f0e8d8;
+  }
+  .choice:hover::before { margin-right: 0.75rem; }
+
+  .choice:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-style: dashed;
+  }
+  .choice:disabled::before { content: '✕'; color: #555; }
+
+  /* ── Prop boxes ────────────────────────────── */
+  .prop-letter {
+    background: #120f07;
+    border: 1px solid #4a3a1a;
+    border-radius: 1px;
+    padding: 1.1rem 1.4rem;
+    margin: 1.25rem 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: #c8b47a;
+  }
+
+  .prop-terminal {
+    background: #020a02;
+    border: 1px solid #1a4a1a;
+    border-radius: 1px;
+    padding: 1.1rem 1.4rem;
+    margin: 1.25rem 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: #4af04a;
+  }
+  .prop-terminal .term-label { color: #27a027; font-size: 0.75rem; margin-bottom: 0.5rem; }
+
+  .prop-postit {
+    background: #f5f0d0;
+    color: #333;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    max-width: 280px;
+    box-shadow: 3px 3px 0 #c8c290, 6px 6px 10px rgba(0,0,0,0.4);
+    transform: rotate(-1deg);
+  }
+
+  .prop-clue {
+    background: var(--panel2);
+    border: 1px solid #3a2a18;
+    padding: 1rem 1.4rem;
+    margin: 1.25rem 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.2rem;
+    letter-spacing: 0.35em;
+    color: #ddd;
+    text-align: center;
+    border-radius: 1px;
+  }
+
+  .item-found {
+    background: #061206;
+    border: 1px solid #2d6a2d;
+    color: var(--green-bright);
+    padding: 0.85rem 1.1rem;
+    margin: 1.25rem 0;
+    border-radius: 1px;
+    font-size: 0.95rem;
+  }
+
+  .hint {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+    display: none;
+  }
+  .hint.revealed { display: block; }
+
+  /* ── Puzzle areas ──────────────────────────── */
+  .puzzle-area {
+    background: #0a0807;
+    border: 1px solid #3a2a18;
+    padding: 1.4rem;
+    margin: 1.5rem 0;
+    border-radius: 1px;
+  }
+
+  .puzzle-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    color: var(--gold-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  .progress-track {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Maze buttons ──────────────────────────── */
+  .dir-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 4px;
+    margin: 0.75rem 0;
+  }
+  .dir-btn {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 1px;
+  }
+  .dir-btn:hover { background: #2a1a0a; border-color: var(--gold-dim); }
+  .dir-btn.center { grid-column: 2; grid-row: 2; opacity: 0; pointer-events: none; }
+
+  /* ── Simon buttons ─────────────────────────── */
+  .simon-grid {
+    display: flex;
+    gap: 0.6rem;
+    margin: 0.75rem 0;
+    flex-wrap: wrap;
+  }
+  .simon-btn {
+    padding: 0.55rem 1.1rem;
+    border: none;
+    border-radius: 1px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    transition: filter 0.1s, transform 0.08s;
+    text-transform: uppercase;
+  }
+  .simon-btn:hover { filter: brightness(1.25); transform: translateY(-1px); }
+  .simon-btn:active { filter: brightness(0.8); transform: translateY(0); }
+  .sbtn-red   { background: #8b1c1c; color: #ffdada; }
+  .sbtn-blue  { background: #1c3a8b; color: #daecff; }
+  .sbtn-green { background: #1c6b2a; color: #d0ffd8; }
+
+  /* ── Text inputs ───────────────────────────── */
+  .puzzle-input-row { display: flex; align-items: center; gap: 0.65rem; margin-top: 0.75rem; }
+  .p-input {
+    background: #050402;
+    border: 1px solid #3a2a18;
+    color: var(--gold);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.3em;
+    padding: 0.5rem 0.75rem;
+    border-radius: 1px;
+    text-align: center;
+    text-transform: uppercase;
+    width: 120px;
+  }
+  .p-input:focus { outline: none; border-color: var(--gold-dim); }
+
+  .p-submit {
+    background: var(--maroon-dim);
+    color: #f0d8d8;
+    border: 1px solid var(--maroon);
+    padding: 0.5rem 1.1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: background 0.15s;
+  }
+  .p-submit:hover { background: var(--maroon); }
+
+  .msg-ok  { color: var(--green-bright); font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; margin-top: 0.5rem; }
+  .msg-err { color: #e05050; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; margin-top: 0.5rem; }
+
+  /* ── Venn diagram ──────────────────────────── */
+  .venn { display: flex; justify-content: center; gap: 1.5rem; margin: 1.5rem 0; align-items: center; }
+  .venn-circle {
+    width: 90px; height: 90px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.2rem;
+  }
+  .vc-brain { background: #0d1826; border: 2px solid #2d6a9f; }
+  .vc-bird  { background: #1a0808; border: 2px solid var(--maroon); }
+
+  /* ── Win screen ────────────────────────────── */
+  #win-wrap { text-align: center; padding: 1rem 0 2rem; }
+  #win-wrap h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    margin: 1.5rem 0 1rem;
+    letter-spacing: 0.08em;
+  }
+  #win-wrap p { margin-bottom: 1rem; line-height: 2; }
+
+  /* ── Hint button ────────────────────────────── */
+  #hint-btn {
+    display: none;
+    margin: 0.75rem auto 0;
+    background: transparent;
+    border: 1px dashed var(--gold-dim);
+    color: var(--gold-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    padding: 0.4rem 1.2rem;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: all 0.18s;
+  }
+  #hint-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.06); }
+
+  /* ── Status bar ─────────────────────────────── */
+  #status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #0c0906;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    padding: 0.5rem 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    z-index: 100;
+  }
+  #status-bar .stat-label { color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  #status-bar .stat-val { color: var(--text); margin-left: 0.35rem; }
+  #status-bar .stat-val.danger { color: var(--red); }
+
+  /* ── Scrollbar ─────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--maroon-dim); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="game-title">Escape the Reg</div>
+  <div id="inventory-bar">
+    <span id="inventory-label">Inventory:</span>
+    <span id="inventory-items">empty</span>
+  </div>
+</div>
+
+<div id="passage-wrap">
+  <div id="passage-title"></div>
+  <div id="passage-content"></div>
+</div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+const G = {
+  inv: new Set(),
+  mazeStep: 0,   // 0–4; 4 = complete
+  simonStep: 0,  // 0–4; 4 = complete
+  chestDone: false,
+  caesarDone: false,
+  hasID: false,
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+const has = item => G.inv.has(item);
+
+function give(item) {
+  G.inv.add(item);
+  const el = document.getElementById('inventory-items');
+  el.textContent = [...G.inv].join('  ·  ');
+}
+
+function go(passage) {
+  const p = PASSAGES[passage];
+  if (!p) return;
+  document.getElementById('passage-title').textContent = p.title;
+  // Trigger animation by replacing element
+  const old = document.getElementById('passage-content');
+  const fresh = document.createElement('div');
+  fresh.id = 'passage-content';
+  fresh.innerHTML = p.render();
+  old.replaceWith(fresh);
+  p.boot && p.boot();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Render a navigation button (locked or clickable)
+function btn(label, target, unlocked = true) {
+  if (!unlocked) {
+    return `<button class="choice" disabled>${label}</button>`;
+  }
+  return `<button class="choice" onclick="go('${target}')">${label}</button>`;
+}
+
+// ─── Passages ───────────────────────────────────────────────────────────────
+const PASSAGES = {
+
+  /* ── Title ── */
+  Start: {
+    title: 'Escape the Reg',
+    render: () => `
+      <p>It is midnight. The Reg sits in heavy silence, every corridor empty, every lamp dim.</p>
+      <p><strong>Phil the Phoenix</strong> blocks the entrance, feathers smouldering, eyes bright with an unnerving intensity.</p>
+      <p><em>"You're not leaving,"</em> he says, <em>"until you find my ID. I lost it somewhere in the Mansueto Library. Don't ask how."</em></p>
+      <p>You sigh. The elevator hums somewhere in the dark. This is going to be a long night.</p>
+      <div class="choices">
+        ${btn('→ Survey your surroundings', 'Entrance')}
+      </div>
+    `
+  },
+
+  /* ── Entrance ── */
+  Entrance: {
+    title: 'Entrance Hall',
+    render: () => `
+      <p>The entrance hall. Phil crouches by the door like a very large, flaming bouncer. Two routes branch away from you.</p>
+      ${G.hasID ? `<div class="item-found">✦ You're holding <strong>Phil's ID</strong>. The exit is right there.</div>` : ''}
+      <div class="choices">
+        ${btn('→ Take the elevator', 'Elevator')}
+        ${has('MAROON KEY')
+          ? btn('→ Walk down the hallway', 'Hallway')
+          : btn('→ Hallway — door sealed (need MAROON KEY)', 'Hallway', false)}
+        ${G.hasID ? `<button class="choice" onclick="go('Escape')">→ Return Phil's ID and escape!</button>` : ''}
+      </div>
+    `
+  },
+
+  /* ── Elevator ── */
+  Elevator: {
+    title: 'Elevator',
+    render: () => `
+      <p>The elevator cab is cramped and smells faintly of old paper. Buttons glow in the dark.</p>
+      <div class="choices">
+        ${btn('↓ B Level', 'BLevel')}
+        ${btn('↓ A Level', 'ALevel')}
+        ${btn('↑ Floor 2', 'Floor2')}
+        ${btn('↑ Floor 3', 'Floor3')}
+        ${has('PHOENIX KEY')
+          ? btn('↑ Floor 4', 'Floor4')
+          : btn('↑ Floor 4 — locked (need PHOENIX KEY)', 'Floor4', false)}
+        ${has('MIND KEY')
+          ? btn('↑ Floor 5', 'Floor5')
+          : btn('↑ Floor 5 — locked (need MIND KEY)', 'Floor5', false)}
+        ${btn('← Back to Entrance', 'Entrance')}
+      </div>
+    `
+  },
+
+  /* ── Hallway ── */
+  Hallway: {
+    title: 'Hallway',
+    render: () => `
+      <p>A long corridor lined with corkboards. Flyers for study groups and "FREE PIZZA" events, all long past.</p>
+      <div class="choices">
+        ${btn('→ Enter Mansueto Library', 'Mansueto')}
+        ${btn('← Back to Entrance', 'Entrance')}
+      </div>
+    `
+  },
+
+  /* ── B Level — Maze ── */
+  BLevel: {
+    title: 'B Level — Bookstack Maze',
+    render: () => {
+      const seq = ['N','E','S','S'];
+      const done = G.mazeStep >= 4;
+      const progress = G.mazeStep > 0 ? seq.slice(0, G.mazeStep).join(' → ') : '(start)';
+      if (done && has('MIND KEY')) {
+        return `
+          <p>The maze stretches around you, but you already know its secret. The <strong>MIND KEY</strong> glints in your inventory.</p>
+          <p>On the table, the crumpled note still reads: <em>N E S S — IS THE TRUTH.</em></p>
+          <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+        `;
+      }
+      if (done) {
+        return `
+          <p>Following the path precisely — North, East, South, South — you emerge at the final shelf. Resting on top is a small brass key tagged <strong>MIND KEY</strong>.</p>
+          <div class="choices">
+            <button class="choice" onclick="give('MIND KEY'); go('BLevel')">✦ Take the MIND KEY</button>
+          </div>
+        `;
+      }
+      return `
+        <p>Bookstacks loom in every direction, forming a dim maze. A single table holds a crumpled scrap of paper:</p>
+        <div class="prop-clue">N &nbsp; E &nbsp; S &nbsp; S<br><span style="font-size:0.65em; letter-spacing:0.2em; color:#888;">IS THE TRUTH</span></div>
+        <div class="puzzle-area">
+          <div class="puzzle-label">Navigate the Maze</div>
+          <div class="progress-track" id="maze-prog">Path so far: ${progress}</div>
+          <div class="dir-grid">
+            <div></div>
+            <button class="dir-btn" onclick="mazeMove('N')">N</button>
+            <div></div>
+            <button class="dir-btn" onclick="mazeMove('W')">W</button>
+            <div class="center"></div>
+            <button class="dir-btn" onclick="mazeMove('E')">E</button>
+            <div></div>
+            <button class="dir-btn" onclick="mazeMove('S')">S</button>
+            <div></div>
+          </div>
+          <div id="maze-msg"></div>
+        </div>
+        <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+      `;
+    }
+  },
+
+  /* ── A Level ── */
+  ALevel: {
+    title: 'A Level',
+    render: () => `
+      <p>The study tables are all empty, chairs pushed back as if everyone left at once. A whiteboard on the far wall has two Venn diagram circles drawn in fading marker.</p>
+      <div class="venn">
+        <div>
+          <div class="venn-circle vc-brain">🧠</div>
+          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">left</div>
+        </div>
+        <div style="color:var(--text-dim); font-size:1.5rem;">∩</div>
+        <div>
+          <div class="venn-circle vc-bird">🐦‍🔥</div>
+          <div style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:0.5rem;">right</div>
+        </div>
+      </div>
+      <p class="hint">A brain and a fiery bird… the two things you might need to unlock further floors.</p>
+      <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+    `
+  },
+
+  /* ── Floor 2 ── */
+  Floor2: {
+    title: 'Floor 2',
+    render: () => `
+      <p>The cubicles are quiet. One desk on the far edge holds a delicate letter, slightly crumpled:</p>
+      <div class="prop-letter">
+        TO: UCHICAGO DINING<br><br>
+        THE DINING COMMONS ARE OUT OF FOOD. AGAIN.<br>
+        WE NEED TO RESTOCK ASAP FOR 4TH MEAL.<br><br>
+        FIRST, BAKER NEEDS MORE <span style="color:#e05050;">TOMATOES</span>.<br>
+        SECOND, WOODLAWN AND CATHEY NEED MORE <span style="color:#5090e0;">BLUEBERRIES</span>.<br>
+        AND LAST… BARTLETT, MORE <span style="color:#50c070;">VEGGIES</span>!
+      </div>
+      <p class="hint">The order of the requests — and their colours — feel significant.</p>
+      <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+    `
+  },
+
+  /* ── Floor 3 — Simon Says ── */
+  Floor3: {
+    title: 'Floor 3 — Simon Says',
+    render: () => {
+      const done = G.simonStep >= 4;
+      if (done && has('PHOENIX KEY')) {
+        return `
+          <p>The Simon Says machine sits silent, its latch hanging open. The <strong>PHOENIX KEY</strong> is already in your possession.</p>
+          <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+        `;
+      }
+      if (done) {
+        return `
+          <p>The machine buzzes and the latch springs open with a satisfying click. Inside, resting on a bed of felt, is the <strong>PHOENIX KEY</strong>.</p>
+          <div class="choices">
+            <button class="choice" onclick="give('PHOENIX KEY'); go('Floor3')">✦ Take the PHOENIX KEY</button>
+          </div>
+        `;
+      }
+      return `
+        <p>In the centre of the room stands a <strong>Simon Says machine</strong>. The UChicago Phoenix stares from its face. You shake it gently — something metallic shifts inside. There's a latch.</p>
+        <div class="puzzle-area">
+          <div class="puzzle-label">Simon Says — Enter the Correct Sequence</div>
+          <div class="progress-track" id="simon-prog">Sequence: ${G.simonStep}/4 correct</div>
+          <div class="simon-grid">
+            <button class="simon-btn sbtn-red"   onclick="simonPress('RED')">● Red</button>
+            <button class="simon-btn sbtn-blue"  onclick="simonPress('BLUE')">● Blue</button>
+            <button class="simon-btn sbtn-green" onclick="simonPress('GREEN')">● Green</button>
+          </div>
+          <div id="simon-msg"></div>
+        </div>
+        <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+      `;
+    }
+  },
+
+  /* ── Floor 4 ── */
+  Floor4: {
+    title: 'Floor 4',
+    render: () => `
+      <p>An ominous stillness. Every desk is gone. Chairs are scattered across the floor — every single one facing <em>you</em>.</p>
+      <p>Words are scrawled on the east and west walls. You feel watched.</p>
+      <div class="choices">
+        ${btn('→ Examine the West Wall', 'Floor4West')}
+        ${btn('→ Examine the East Wall', 'Floor4East')}
+        ${btn('← Back to Elevator', 'Elevator')}
+      </div>
+    `
+  },
+
+  Floor4West: {
+    title: 'Floor 4 — West Wall',
+    render: () => `
+      <p>You approach the west wall. Scratched in deep, ragged strokes:</p>
+      <div class="prop-clue" style="font-size:2.2rem; font-family:'Cinzel',serif; letter-spacing:0.2em;">EIGHT</div>
+      <p class="hint">Just the word. Nothing else.</p>
+      <div class="choices">${btn('← Back to Floor 4', 'Floor4')}</div>
+    `
+  },
+
+  Floor4East: {
+    title: 'Floor 4 — East Wall',
+    render: () => `
+      <p>The east wall carries its own message, in jagged black lines:</p>
+      <div class="prop-clue" style="font-size:2.2rem; font-family:'Cinzel',serif; letter-spacing:0.2em;">TEEN</div>
+      <p class="hint">EIGHT… TEEN. Eighteen. And that post-it upstairs mentioned a score…</p>
+      <div class="choices">${btn('← Back to Floor 4', 'Floor4')}</div>
+    `
+  },
+
+  /* ── Floor 5 — Chest ── */
+  Floor5: {
+    title: 'Floor 5',
+    render: () => {
+      if (has('MAROON KEY')) {
+        return `
+          <p>The wooden chest sits open, empty. The <strong>MAROON KEY</strong> is safely in your possession.</p>
+          <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+        `;
+      }
+      return `
+        <p>A wooden chest with a deep reddish tint sits on the centre table. A yellow Post-it is stuck to the wall beside it:</p>
+        <div style="display:flex; justify-content:center; margin:1.25rem 0;">
+          <div class="prop-postit">
+            UCHICAGO VS. NORTHWESTERN<br><br>
+            HOME: &nbsp;<strong>9</strong><br>
+            AWAY: &nbsp;<strong>0</strong>
+          </div>
+        </div>
+        <p>The chest bears a <strong>4-digit combination lock</strong>.</p>
+        <div class="puzzle-area">
+          <div class="puzzle-label">Enter the Four-Digit Code</div>
+          <div class="puzzle-input-row">
+            <input class="p-input" id="chest-in" type="text" maxlength="4" placeholder="0000" />
+            <button class="p-submit" onclick="checkChest()">Unlock</button>
+          </div>
+          <div id="chest-msg"></div>
+        </div>
+        <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
+      `;
+    }
+  },
+
+  /* ── Mansueto ── */
+  Mansueto: {
+    title: 'Mansueto Library',
+    render: () => {
+      if (G.caesarDone && has("Phil's ID")) {
+        return `
+          <p>The dome is silent. The terminal glows green in the dark. Phil's ID is safely in your grasp.</p>
+          <div class="choices">${btn('← Back to Entrance', 'Entrance')}</div>
+        `;
+      }
+      if (G.caesarDone) {
+        return `
+          <p>The screen flashes. A table illuminates behind you. Resting there, slightly dusty, is <strong>Phil's ID</strong>.</p>
+          <div class="choices">
+            <button class="choice" onclick="give(&quot;Phil's ID&quot;); G.hasID=true; go('Entrance')">✦ Take Phil's ID</button>
+          </div>
+        `;
+      }
+      return `
+        <p>The Mansueto dome rises into blackness above you. Cold and gloomy. A single desk lamp casts pale light onto a computer screen.</p>
+        <div class="prop-terminal">
+          <div class="term-label">TERMINAL &gt;&gt;</div>
+          CAESAR TOOK 3 STEPS FORWARD<br><br>
+          <span style="font-size:1.6rem; letter-spacing:0.5em;">R &nbsp; L &nbsp; Z</span>
+        </div>
+        <p>Below the screen is an input field — three characters wide.</p>
+        <div class="puzzle-area">
+          <div class="puzzle-label">Enter the Decoded Letters</div>
+          <div class="puzzle-input-row">
+            <input class="p-input" id="caesar-in" type="text" maxlength="3" placeholder="_ _ _"
+              oninput="this.value=this.value.toUpperCase()" style="width:100px;" />
+            <button class="p-submit" onclick="checkCaesar()">Submit</button>
+          </div>
+          <div id="caesar-msg"></div>
+        </div>
+        <div class="choices">${btn('← Back to Hallway', 'Hallway')}</div>
+      `;
+    }
+  },
+
+  /* ── Escape ── */
+  Escape: {
+    title: 'Freedom',
+    render: () => `
+      <div id="win-wrap">
+        <div style="font-size:3rem;">🐦‍🔥</div>
+        <h2>You Escaped the Reg</h2>
+        <p>You hold up Phil's ID. Phil the Phoenix stares at it for a long moment. His blazing feathers cool — first orange, then amber, then a dim, embarrassed crimson.</p>
+        <p><em>"…Fine,"</em> he mutters, stepping aside. <em>"You may pass."</em></p>
+        <p>The heavy door swings open. Cool night air floods in. You step out onto the quad, gothic spires silhouetted against a dark sky, and breathe.</p>
+        <p style="color: var(--gold); font-family:'Cinzel',serif; letter-spacing:0.1em; margin-top:1.5rem;">The University of Chicago, 1890–present.<br>Phil will not be losing his ID again.</p>
+        <div class="choices" style="align-items:center; margin-top:2rem;">
+          <button class="choice" onclick="resetGame()" style="width:fit-content;">↩ Play Again</button>
+        </div>
+      </div>
+    `
+  }
+};
+
+// ─── Puzzle Logic ────────────────────────────────────────────────────────────
+
+const MAZE_SEQ = ['N','E','S','S'];
+function mazeMove(dir) {
+  const expected = MAZE_SEQ[G.mazeStep];
+  const msg = document.getElementById('maze-msg');
+  const prog = document.getElementById('maze-prog');
+  if (dir === expected) {
+    G.mazeStep++;
+    if (G.mazeStep >= 4) {
+      go('BLevel');
+    } else {
+      if (prog) prog.textContent = 'Path so far: ' + MAZE_SEQ.slice(0, G.mazeStep).join(' → ');
+      if (msg) { msg.className = 'msg-ok'; msg.textContent = '✓ A gap in the shelves — keep going…'; }
+    }
+  } else {
+    G.mazeStep = 0;
+    if (prog) prog.textContent = 'Path so far: (start)';
+    if (msg) { msg.className = 'msg-err'; msg.textContent = '✗ A dead end. The stacks close in and you find yourself back at the beginning.'; }
+  }
+}
+
+const SIMON_SEQ = ['RED','BLUE','BLUE','GREEN'];
+function simonPress(color) {
+  const expected = SIMON_SEQ[G.simonStep];
+  const msg = document.getElementById('simon-msg');
+  const prog = document.getElementById('simon-prog');
+  if (color === expected) {
+    G.simonStep++;
+    if (G.simonStep >= 4) {
+      go('Floor3');
+    } else {
+      if (prog) prog.textContent = `Sequence: ${G.simonStep}/4 correct`;
+      if (msg) { msg.className = 'msg-ok'; msg.textContent = '✓ The machine chimes softly…'; }
+    }
+  } else {
+    G.simonStep = 0;
+    if (prog) prog.textContent = 'Sequence: 0/4 correct';
+    if (msg) { msg.className = 'msg-err'; msg.textContent = '✗ BZZT! The machine buzzes angrily and resets.'; }
+  }
+}
+
+function checkChest() {
+  const val = (document.getElementById('chest-in').value || '').trim();
+  const msg = document.getElementById('chest-msg');
+  if (val === '1890') {
+    give('MAROON KEY');
+    G.chestDone = true;
+    go('Floor5');
+  } else {
+    msg.className = 'msg-err';
+    msg.textContent = '✗ The lock does not budge.';
+  }
+}
+
+function checkCaesar() {
+  const val = (document.getElementById('caesar-in').value || '').trim().toUpperCase();
+  const msg = document.getElementById('caesar-msg');
+  if (val === 'UOC') {
+    G.caesarDone = true;
+    go('Mansueto');
+  } else {
+    msg.className = 'msg-err';
+    msg.textContent = '✗ Nothing happens. The cursor blinks indifferently.';
+  }
+}
+
+function resetGame() {
+  G.inv.clear();
+  G.mazeStep = 0;
+  G.simonStep = 0;
+  G.chestDone = false;
+  G.caesarDone = false;
+  G.hasID = false;
+  document.getElementById('inventory-items').textContent = 'empty';
+  go('Start');
+}
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+go('Start');
+</script>
+</body>
+</html>

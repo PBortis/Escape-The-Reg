@@ -89,7 +89,9 @@
   }
 
   #inventory-label { color: var(--gold-dim); text-transform: uppercase; letter-spacing: 0.08em; }
-  #inventory-items { color: var(--gold); }
+  #inventory-items { color: var(--gold); display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .inv-item { display: flex; align-items: center; gap: 0.3rem; }
+  .inv-item img { width: 28px; height: 28px; object-fit: contain; filter: drop-shadow(0 0 3px rgba(201,168,76,0.5)); }
 
   /* ── Main passage panel ─────────────────────── */
   #passage-wrap {
@@ -495,10 +497,20 @@ const G = {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const has = item => G.inv.has(item);
 
+const ITEM_IMAGES = {
+  'MAROON KEY':  'png/MaroonKey.png',
+  'MIND KEY':    'png/MindKey.png',
+  'PHOENIX KEY': 'png/PhoenixKey.png',
+  "PHIL'S ID":   'png/PhilID.png',
+};
+
 function give(item) {
   G.inv.add(item);
   const el = document.getElementById('inventory-items');
-  el.textContent = [...G.inv].join('  ·  ');
+  el.innerHTML = [...G.inv].map(i => {
+    const img = ITEM_IMAGES[i] ? `<img src="${ITEM_IMAGES[i]}" alt="${i}">` : '';
+    return `<span class="inv-item">${img}<span>${i}</span></span>`;
+  }).join('<span style="color:var(--gold-dim)"> · </span>');
 }
 
 function formatTime() {

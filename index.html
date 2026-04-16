@@ -255,6 +255,7 @@
     padding: 1.4rem;
     margin: 1.5rem 0;
     border-radius: 1px;
+    text-align: center;
   }
 
   .puzzle-label {
@@ -277,11 +278,11 @@
 
   /* ── Maze buttons ──────────────────────────── */
   .dir-grid {
-    display: grid;
+    display: inline-grid;
     grid-template-columns: repeat(3, 48px);
     grid-template-rows: repeat(3, 40px);
     gap: 4px;
-    margin: 0.75rem 0;
+    margin: 0.75rem auto;
   }
   .dir-btn {
     background: var(--panel2);
@@ -628,7 +629,7 @@ const PASSAGES = {
   Entrance: {
     title: 'Entrance Hall',
     render: () => `
-      <p>The entrance hall. Phil crouches by the door like a very large, angry bouncer. Two routes branch away from you.</p>
+      <p>The entrance hall. Phil crouches by the door like a very large (angry) bouncer. Two routes branch away from you.</p>
       ${G.hasID ? `<div class="item-found">✦ You're holding <strong>PHIL'S ID</strong>. The exit is right there.</div>` : ''}
       <div class="choices">
         ${btn('→ Take the elevator', 'Elevator')}
@@ -750,9 +751,9 @@ const PASSAGES = {
         TO: UCHICAGO DINING<br><br>
         THE DINING COMMONS ARE OUT OF FOOD. AGAIN.<br>
         WE NEED TO RESTOCK ASAP FOR 4TH MEAL.<br><br>
-        FIRST, BAKER NEEDS MORE <span style="color:#e05050;">TOMATOES</span>.<br>
-        SECOND, WOODLAWN AND CATHEY NEED MORE <span style="color:#5090e0;">BLUEBERRIES</span>.<br>
-        AND LAST… BARTLETT, MORE <span style="color:#50c070;">VEGGIES</span>!
+        FIRST, BAKER NEEDS MORE RED APPLES.<br>
+        SECOND, WOODLAWN AND CATHEY NEED MORE BLUEBERRIES.<br>
+        AND LAST… BARTLETT, MORE GREEN BEANS!
       </div>
       <p class="hint">The order of the requests — and their colours — feel significant.</p>
       <div class="choices">${btn('← Back to Elevator', 'Elevator')}</div>
@@ -779,7 +780,7 @@ const PASSAGES = {
         `;
       }
       return `
-        <p>In the centre of the room stands a <strong>Dean Boyer Says machine</strong>. The UChicago Phoenix stares from its face. You shake it gently — something metallic shifts inside. There's a latch.</p>
+        <p>In the center of the room stands a <strong>Dean Boyer Says machine</strong>. The UChicago Phoenix stares from its face. You shake it gently — something metallic shifts inside. There's a latch.</p>
         <div class="puzzle-area">
           <div class="puzzle-label">Dean Boyer Says — Enter the Correct Sequence</div>
           <div class="progress-track" id="simon-prog">Sequence: ${G.simonStep}/4 correct</div>

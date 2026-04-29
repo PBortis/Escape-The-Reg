@@ -652,7 +652,6 @@ function showMistakeDeltas() {
     html += `<div class="mistake-puzzle">${entry.puzzle}</div>`;
     html += '<div class="mistake-delta">';
     html += `<div class="delta-attempt">❌ Attempt: <strong>${escapeHtml(entry.attempt)}</strong></div>`;
-    html += `<div class="delta-correct">✓ Correct: <strong>${escapeHtml(entry.correct)}</strong></div>`;
 
     // Show time since last failed attempt only if same puzzle
     if (prevTimestamp !== null && prevPuzzle === entry.puzzle) {

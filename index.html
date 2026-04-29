@@ -451,6 +451,94 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--maroon-dim); border-radius: 3px; }
+
+  /* ── Mistake Deltas Modal ──────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .modal-content {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2rem;
+    max-width: 600px;
+    max-height: 70vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-content h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+
+  .mistake-entry {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #0a0807;
+    border-left: 2px solid var(--maroon);
+    border-radius: 1px;
+  }
+
+  .mistake-puzzle {
+    font-family: 'Cinzel', serif;
+    color: var(--gold);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .mistake-delta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .delta-attempt {
+    color: #e05050;
+    margin-bottom: 0.3rem;
+  }
+
+  .delta-correct {
+    color: var(--green-bright);
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .modal-close:hover {
+    color: var(--text);
+  }
+
+  .empty-state {
+    color: var(--text-dim);
+    text-align: center;
+    padding: 2rem 1rem;
+    font-style: italic;
+  }
 </style>
 </head>
 <body>
@@ -477,7 +565,10 @@
 <div id="status-bar">
   <span><span class="stat-label">Time:</span><span class="stat-val" id="stat-time">00:00</span></span>
   <span><span class="stat-label">Mistakes:</span><span class="stat-val" id="stat-mistakes">0</span></span>
-  <span><span class="stat-label">Hints Used:</span><span class="stat-val" id="stat-hints">0</span></span>
+  <span style="display:flex; align-items:center; gap:0.5rem;">
+    <span><span class="stat-label">Hints Used:</span><span class="stat-val" id="stat-hints">0</span></span>
+    <button id="mistakes-btn" style="background:transparent; border:1px solid #444; color:#888; padding:0.2rem 0.6rem; font-size:0.7rem; cursor:pointer; border-radius:1px; font-family:'Share Tech Mono',monospace;" onclick="showMistakeDeltas()" title="View mistake history">DEVELOPER</button>
+  </span>
 </div>
 
 <script>
@@ -493,6 +584,7 @@ const G = {
   hints: 0,
   startTime: null,
   timerInterval: null,
+  mistakeLog: [],  // Track detailed mistakes: {puzzle, attempt, correct}
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -541,6 +633,67 @@ function revealHint() {
   updateStats();
   const btn = document.getElementById('hint-btn');
   if (btn) btn.style.display = 'none';
+}
+
+function showMistakeDeltas() {
+  if (G.mistakeLog.length === 0) {
+    alert('No mistakes yet! You\'re doing great!');
+    return;
+  }
+
+  let html = '<div class="modal-content">';
+  html += '<button class="modal-close" onclick="closeMistakeModal()">✕</button>';
+  html += '<h2>Mistake Deltas</h2>';
+
+  let prevTimestamp = null;
+  let prevPuzzle = null;
+  G.mistakeLog.forEach((entry, idx) => {
+    html += '<div class="mistake-entry">';
+    html += `<div class="mistake-puzzle">${entry.puzzle}</div>`;
+    html += '<div class="mistake-delta">';
+    html += `<div class="delta-attempt">❌ Attempt: <strong>${escapeHtml(entry.attempt)}</strong></div>`;
+    html += `<div class="delta-correct">✓ Correct: <strong>${escapeHtml(entry.correct)}</strong></div>`;
+
+    // Show time since last failed attempt only if same puzzle
+    if (prevTimestamp !== null && prevPuzzle === entry.puzzle) {
+      const timeDelta = (entry.timestamp - prevTimestamp) / 1000; // Convert to seconds
+      const minutes = Math.floor(timeDelta / 60);
+      const seconds = Math.floor(timeDelta - minutes * 60);
+      let timeStr = '';
+      if (minutes > 0) {
+        timeStr = `${minutes}m ${seconds}s`;
+      } else {
+        timeStr = `${seconds}s`;
+      }
+      html += `<div style="margin-top:0.5rem; font-size:0.8rem; color:#aaa;">⏱ Time to next attempt: <strong style="color:#888">${timeStr}</strong></div>`;
+    }
+
+    prevTimestamp = entry.timestamp;
+    prevPuzzle = entry.puzzle;
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'mistake-modal-overlay';
+  overlay.innerHTML = html;
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeMistakeModal();
+  };
+
+  document.body.appendChild(overlay);
+}
+
+function closeMistakeModal() {
+  const modal = document.getElementById('mistake-modal-overlay');
+  if (modal) modal.remove();
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 const PASSAGE_IMAGES = {
@@ -940,6 +1093,13 @@ function mazeMove(dir) {
       if (msg) { msg.className = 'msg-ok'; msg.textContent = '✓ A gap in the shelves — keep going…'; }
     }
   } else {
+    const attemptedPath = MAZE_SEQ.slice(0, G.mazeStep).concat(dir).join(' → ');
+    G.mistakeLog.push({
+      puzzle: 'Maze Puzzle',
+      attempt: attemptedPath,
+      correct: MAZE_SEQ.join(' → '),
+      timestamp: Date.now()
+    });
     G.mazeStep = 0;
     G.mistakes++; updateStats();
     if (prog) prog.textContent = 'Path so far: (start)';
@@ -961,9 +1121,16 @@ function simonPress(color) {
       if (msg) { msg.className = 'msg-ok'; msg.textContent = '✓ The machine chimes softly…'; }
     }
   } else {
+    const attemptedSeq = SIMON_SEQ.slice(0, G.simonStep).concat(color).join(' → ');
+    G.mistakeLog.push({
+      puzzle: 'Simon Says Machine',
+      attempt: attemptedSeq,
+      correct: SIMON_SEQ.join(' → '),
+      timestamp: Date.now()
+    });
     G.simonStep = 0;
     G.mistakes++; updateStats();
-      if (prog) prog.textContent = 'Sequence: 0/4 correct';
+    if (prog) prog.textContent = 'Sequence: 0/4 correct';
     if (msg) { msg.className = 'msg-err'; msg.textContent = '✗ BZZT! The machine buzzes angrily and resets.'; }
   }
 }
@@ -976,6 +1143,12 @@ function checkChest() {
     G.chestDone = true;
     go('Floor5');
   } else {
+    G.mistakeLog.push({
+      puzzle: 'Chest Lock Puzzle',
+      attempt: val || '(empty)',
+      correct: '1890',
+      timestamp: Date.now()
+    });
     G.mistakes++; updateStats();
     msg.className = 'msg-err';
     msg.textContent = '✗ The lock does not budge.';
@@ -989,6 +1162,12 @@ function checkCaesar() {
     G.caesarDone = true;
     go('Mansueto');
   } else {
+    G.mistakeLog.push({
+      puzzle: 'Caesar Cipher',
+      attempt: val || '(empty)',
+      correct: 'UOC',
+      timestamp: Date.now()
+    });
     G.mistakes++; updateStats();
     msg.className = 'msg-err';
     msg.textContent = '✗ Nothing happens. The cursor blinks indifferently.';
@@ -1004,6 +1183,7 @@ function resetGame() {
   G.hasID = false;
   G.mistakes = 0;
   G.hints = 0;
+  G.mistakeLog = [];
   G.startTime = null;
   if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
   document.getElementById('inventory-items').textContent = 'empty';

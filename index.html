@@ -394,7 +394,12 @@
     border-radius: 1px;
     transition: all 0.18s;
   }
-  #hint-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.06); }
+  #hint-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.06); }
+  #hint-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-style: dotted;
+  }
 
   /* ── Status bar ─────────────────────────────── */
   #status-bar {
@@ -582,6 +587,9 @@ const G = {
   hasID: false,
   mistakes: 0,
   hints: 0,
+  lastHintTime: 0,  // Timestamp of last hint reveal
+  hintCooldown: 120000,  // 2 minutes in milliseconds
+  hintCooldownInterval: null,  // Interval for cooldown timer
   startTime: null,
   timerInterval: null,
   mistakeLog: [],  // Track detailed mistakes: {puzzle, attempt, correct}
@@ -623,16 +631,68 @@ function updateStats() {
   if (h) h.textContent = G.hints;
 }
 
+function updateHintButtonCooldown() {
+  const btn = document.getElementById('hint-btn');
+  if (!btn) return;
+  
+  const now = Date.now();
+  const timeSinceLastHint = now - G.lastHintTime;
+  const remaining = G.hintCooldown - timeSinceLastHint;
+  
+  if (remaining <= 0) {
+    // Cooldown expired
+    if (G.hintCooldownInterval) {
+      clearInterval(G.hintCooldownInterval);
+      G.hintCooldownInterval = null;
+    }
+    btn.disabled = false;
+    btn.textContent = '💡 Reveal Hint';
+  } else {
+    // Still cooling down
+    const remainingSeconds = Math.ceil(remaining / 1000);
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    btn.textContent = `💡 Hint: ${timeStr}`;
+  }
+}
+
 function revealHint() {
+  const now = Date.now();
+  const timeSinceLastHint = now - G.lastHintTime;
+  
+  // Check if cooldown is still active
+  if (G.lastHintTime > 0 && timeSinceLastHint < G.hintCooldown) {
+    // Cooldown is active, disable button and show timer
+    const btn = document.getElementById('hint-btn');
+    if (btn && !btn.disabled) {
+      btn.disabled = true;
+      // Start cooldown timer
+      if (G.hintCooldownInterval) clearInterval(G.hintCooldownInterval);
+      G.hintCooldownInterval = setInterval(updateHintButtonCooldown, 100);
+      updateHintButtonCooldown();
+    }
+    return;
+  }
+  
   const hints = document.querySelectorAll('#passage-content .hint');
   let anyHidden = false;
   hints.forEach(h => { if (!h.classList.contains('revealed')) anyHidden = true; });
   if (!anyHidden) return;
+  
   G.hints++;
+  G.lastHintTime = now;
   hints.forEach(h => h.classList.add('revealed'));
   updateStats();
+  
+  // Disable button and start cooldown timer
   const btn = document.getElementById('hint-btn');
-  if (btn) btn.style.display = 'none';
+  if (btn) {
+    btn.disabled = true;
+    if (G.hintCooldownInterval) clearInterval(G.hintCooldownInterval);
+    G.hintCooldownInterval = setInterval(updateHintButtonCooldown, 100);
+    updateHintButtonCooldown();
+  }
 }
 
 function showMistakeDeltas() {
@@ -1068,9 +1128,6 @@ const PASSAGES = {
         <p><em>"…Fine,"</em> he mutters, stepping aside. <em>"You may pass."</em></p>
         <p>The heavy door swings open. Cool night air floods in. You step out onto the quad, gothic spires silhouetted against a dark sky, and breathe.</p>
         <p style="color: var(--gold); font-family:'Cinzel',serif; letter-spacing:0.1em; margin-top:1.5rem;">The University of Chicago, 1890–present.<br>Where Fun Comes To Die</p>
-        <div class="choices" style="align-items:center; margin-top:2rem;">
-          <button class="choice" onclick="resetGame()" style="width:fit-content;">↩ Play Again</button>
-        </div>
       </div>
     `
   }
@@ -1182,9 +1239,11 @@ function resetGame() {
   G.hasID = false;
   G.mistakes = 0;
   G.hints = 0;
+  G.lastHintTime = 0;
   G.mistakeLog = [];
   G.startTime = null;
   if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+  if (G.hintCooldownInterval) { clearInterval(G.hintCooldownInterval); G.hintCooldownInterval = null; }
   document.getElementById('inventory-items').textContent = 'empty';
   updateStats();
   go('Start');

@@ -701,9 +701,52 @@ function showMistakeDeltas() {
     return;
   }
 
+  // Calculate statistics
+  const totalAttempts = G.mistakeLog.length;
+  const puzzleStats = {};
+  
+  // Group attempts by puzzle and calculate average time delta
+  G.mistakeLog.forEach((entry, idx) => {
+    if (!puzzleStats[entry.puzzle]) {
+      puzzleStats[entry.puzzle] = { count: 0, timeDifferences: [] };
+    }
+    puzzleStats[entry.puzzle].count++;
+    
+    // Calculate time difference from previous attempt of same puzzle
+    const prevEntry = G.mistakeLog.slice(0, idx).reverse().find(e => e.puzzle === entry.puzzle);
+    if (prevEntry) {
+      const timeDelta = (entry.timestamp - prevEntry.timestamp) / 1000;
+      puzzleStats[entry.puzzle].timeDifferences.push(timeDelta);
+    }
+  });
+
+  // Calculate overall average time delta
+  let allTimeDifferences = [];
+  Object.values(puzzleStats).forEach(stat => {
+    allTimeDifferences = allTimeDifferences.concat(stat.timeDifferences);
+  });
+  const avgTimeDelta = allTimeDifferences.length > 0 
+    ? allTimeDifferences.reduce((a, b) => a + b, 0) / allTimeDifferences.length 
+    : 0;
+  const totalTimeDelta = allTimeDifferences.reduce((a, b) => a + b, 0);
+
+  function formatSeconds(secs) {
+    const minutes = Math.floor(secs / 60);
+    const seconds = Math.floor(secs % 60);
+    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  }
+
   let html = '<div class="modal-content">';
   html += '<button class="modal-close" onclick="closeMistakeModal()">✕</button>';
   html += '<h2>Mistake Deltas</h2>';
+  
+  // Add summary statistics
+  html += '<div style="background: #0a0807; border: 1px solid #3a2a18; border-radius: 1px; padding: 1rem 1.4rem; margin-bottom: 1.5rem;">';
+  html += '<div style="font-family: \'Cinzel\', serif; font-size: 0.85rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem;">Summary Statistics</div>';
+  html += `<div style="font-family: \'Share Tech Mono\', monospace; font-size: 0.8rem; color: var(--text); line-height: 1.8;">`;
+  html += `<div>Total Time Between Attempts: <strong>${formatSeconds(totalTimeDelta)}</strong></div>`;
+  html += `<div>Avg Time Between Attempts: <strong>${formatSeconds(avgTimeDelta)}</strong></div>`;
+  html += `</div></div>`;
 
   let prevTimestamp = null;
   let prevPuzzle = null;
@@ -716,15 +759,7 @@ function showMistakeDeltas() {
     // Show time since last failed attempt only if same puzzle
     if (prevTimestamp !== null && prevPuzzle === entry.puzzle) {
       const timeDelta = (entry.timestamp - prevTimestamp) / 1000; // Convert to seconds
-      const minutes = Math.floor(timeDelta / 60);
-      const seconds = Math.floor(timeDelta - minutes * 60);
-      let timeStr = '';
-      if (minutes > 0) {
-        timeStr = `${minutes}m ${seconds}s`;
-      } else {
-        timeStr = `${seconds}s`;
-      }
-      html += `<div style="margin-top:0.5rem; font-size:0.8rem; color:#aaa;">⏱ Time to next attempt: <strong style="color:#888">${timeStr}</strong></div>`;
+      html += `<div style="margin-top:0.5rem; font-size:0.8rem; color:#aaa;">⏱ Time to next attempt: <strong style="color:#888">${formatSeconds(timeDelta)}</strong></div>`;
     }
 
     prevTimestamp = entry.timestamp;

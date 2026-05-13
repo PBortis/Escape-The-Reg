@@ -588,7 +588,7 @@ const G = {
   mistakes: 0,
   hints: 0,
   lastHintTime: 0,  // Timestamp of last hint reveal
-  hintCooldown: 120000,  // 2 minutes in milliseconds
+  hintCooldown: 180000,  // 3 minutes in milliseconds
   hintCooldownInterval: null,  // Interval for cooldown timer
   startTime: null,
   timerInterval: null,
@@ -822,6 +822,9 @@ function go(passage) {
   // Start timer on first real navigation
   if (!G.startTime && passage !== 'Start') {
     G.startTime = Date.now();
+    G.lastHintTime = G.startTime;
+    if (G.hintCooldownInterval) clearInterval(G.hintCooldownInterval);
+    G.hintCooldownInterval = setInterval(updateHintButtonCooldown, 100);
     G.timerInterval = setInterval(() => {
       const el = document.getElementById('stat-time');
       if (el) el.textContent = formatTime();
